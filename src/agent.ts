@@ -32,7 +32,10 @@ export async function runAgent(
 ): Promise<string> {
   const events = runner.runEphemeral({
     userId,
-    newMessage: message,
+    newMessage: {
+      role: "user",
+      parts: [{ text: message }],
+    },
   });
 
   let lastResponse = "";

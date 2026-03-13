@@ -53,6 +53,8 @@ const server = createServer(async (req, res) => {
       // JSON パース失敗は無視して通常の webhook 処理に進む
     }
 
+    console.log("[webhook] Received event:", JSON.parse(body).type ?? "unknown");
+
     const webRequest = new Request(url.toString(), {
       method: "POST",
       headers: Object.fromEntries(

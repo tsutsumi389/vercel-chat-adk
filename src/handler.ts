@@ -8,12 +8,16 @@ export function createMentionHandler(runAgentFn: RunAgentFn) {
       return;
     }
 
+    console.log(`[handler] Message from ${message.author.userId}: ${message.text}`);
     await thread.startTyping();
 
     try {
+      console.log("[handler] Calling agent...");
       const response = await runAgentFn(message.text, message.author.userId);
+      console.log(`[handler] Agent response: ${response}`);
       await thread.post(response);
-    } catch {
+    } catch (err) {
+      console.error("[handler] Error:", err);
       await thread.post("エラーが発生しました。しばらくしてからもう一度お試しください。");
     }
   };

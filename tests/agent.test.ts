@@ -81,7 +81,10 @@ describe("runAgent", () => {
     expect(response).toBe("こんにちは！");
     expect(mockRunner.runEphemeral).toHaveBeenCalledWith({
       userId: "user-123",
-      newMessage: "テストメッセージ",
+      newMessage: {
+        role: "user",
+        parts: [{ text: "テストメッセージ" }],
+      },
     });
   });
 
