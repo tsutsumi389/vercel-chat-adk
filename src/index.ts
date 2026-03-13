@@ -28,44 +28,61 @@ chat.onNewMention(createMentionHandler(boundRunAgent));
 chat.onSubscribedMessage(createMentionHandler(boundRunAgent));
 chat.onDirectMessage(createMentionHandler(boundRunAgent));
 
-const backgroundTasks: Promise<unknown>[] = [];
+const MAX_BODY = 256 * 1024;
 
 const server = createServer(async (req, res) => {
   const url = new URL(req.url ?? "/", `http://${req.headers.host}`);
 
   if (url.pathname === "/webhooks/slack" && req.method === "POST") {
-    const body = await new Promise<string>((resolve) => {
+    const body = await new Promise<string>((resolve, reject) => {
       let data = "";
-      req.on("data", (chunk) => (data += chunk));
+      req.on("data", (chunk) => {
+        data += chunk;
+        if (data.length > MAX_BODY) {
+          req.destroy();
+          reject(new Error("Payload too large"));
+        }
+      });
       req.on("end", () => resolve(data));
+    }).catch(() => {
+      res.writeHead(413);
+      res.end("Payload too large");
+      return null;
     });
 
-    // Slack URL verification challenge を直接ハンドリング
+    if (body === null) return;
+
+    let parsed: Record<string, unknown> | undefined;
     try {
-      const parsed = JSON.parse(body);
-      if (parsed.type === "url_verification") {
-        console.log("Slack URL verification challenge received");
-        res.writeHead(200, { "Content-Type": "application/json" });
-        res.end(JSON.stringify({ challenge: parsed.challenge }));
-        return;
-      }
+      parsed = JSON.parse(body);
     } catch {
-      // JSON パース失敗は無視して通常の webhook 処理に進む
+      // JSON パース失敗は adapter に任せる
     }
 
-    console.log("[webhook] Received event:", JSON.parse(body).type ?? "unknown");
+    if (parsed?.type === "url_verification") {
+      console.log("[webhook] URL verification challenge received");
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ challenge: parsed.challenge }));
+      return;
+    }
+
+    console.log("[webhook] Received event:", parsed?.type ?? "unknown");
+
+    const headers: Record<string, string> = {};
+    for (const [key, value] of Object.entries(req.headers)) {
+      if (typeof value === "string") headers[key] = value;
+    }
 
     const webRequest = new Request(url.toString(), {
       method: "POST",
-      headers: Object.fromEntries(
-        Object.entries(req.headers)
-          .filter((entry): entry is [string, string] => typeof entry[1] === "string")
-      ),
+      headers,
       body,
     });
 
     const response = await chat.webhooks.slack(webRequest, {
-      waitUntil: (p: Promise<unknown>) => { backgroundTasks.push(p); },
+      waitUntil: (p: Promise<unknown>) => {
+        p.catch((err) => console.error("[bg] Task failed:", err));
+      },
     });
 
     res.writeHead(response.status, Object.fromEntries(response.headers.entries()));
