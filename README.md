@@ -7,3 +7,5 @@ AIエージェントは、googleのADK(`https://github.com/google/adk-js`)を使
 必ず作って欲しいドキュメント
 docs/adr.md
   日時となぜその技術を採用したかを記載
+
+実装はTDDで行って
