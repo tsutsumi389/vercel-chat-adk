@@ -9,7 +9,7 @@ describe("createMentionHandler", () => {
   };
   const mockMessage = {
     text: "こんにちは、ボットさん",
-    author: { id: "U123ABC" },
+    author: { userId: "U123ABC" },
   };
 
   beforeEach(() => {
@@ -47,7 +47,7 @@ describe("createMentionHandler", () => {
   });
 
   it("空メッセージの場合はスキップする", async () => {
-    const emptyMessage = { text: "", author: { id: "U123" } };
+    const emptyMessage = { text: "", author: { userId: "U123" } };
 
     const handler = createMentionHandler(mockRunAgent);
     await handler(mockThread as never, emptyMessage as never);
