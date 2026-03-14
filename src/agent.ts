@@ -28,10 +28,20 @@ export function createAgent(config: Config) {
 export async function runAgent(
   runner: InstanceType<typeof InMemoryRunner>,
   message: string,
-  userId: string
+  userId: string,
+  sessionId: string,
 ): Promise<string> {
-  const events = runner.runEphemeral({
+  const appName = "vercel-chat-adk";
+
+  await runner.sessionService.getOrCreateSession({
+    appName,
     userId,
+    sessionId,
+  });
+
+  const events = runner.runAsync({
+    userId,
+    sessionId,
     newMessage: {
       role: "user",
       parts: [{ text: message }],

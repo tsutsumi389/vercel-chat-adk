@@ -9,14 +9,18 @@ vi.mock("adk-llm-bridge", () => ({
 
 // @google/adk をモック
 vi.mock("@google/adk", () => {
-  const mockRunEphemeral = vi.fn();
+  const mockRunAsync = vi.fn();
+  const mockGetOrCreateSession = vi.fn().mockResolvedValue({});
   return {
     LlmAgent: vi.fn().mockImplementation((config: Record<string, unknown>) => ({
       ...config,
       _isMockAgent: true,
     })),
     InMemoryRunner: vi.fn().mockImplementation(() => ({
-      runEphemeral: mockRunEphemeral,
+      runAsync: mockRunAsync,
+      sessionService: {
+        getOrCreateSession: mockGetOrCreateSession,
+      },
     })),
     InMemorySessionService: vi.fn(),
   };
@@ -68,19 +72,27 @@ describe("runAgent", () => {
 
   it("ユーザーメッセージを処理して応答テキストを返す", async () => {
     const { InMemoryRunner } = await import("@google/adk");
-    const mockRunner = new (InMemoryRunner as unknown as new () => { runEphemeral: ReturnType<typeof vi.fn> })();
+    const mockRunner = new (InMemoryRunner as unknown as new () => {
+      runAsync: ReturnType<typeof vi.fn>;
+      sessionService: { getOrCreateSession: ReturnType<typeof vi.fn> };
+    })();
 
-    // イベントジェネレータをモック
     async function* mockEvents() {
       yield { author: "slack-assistant", content: { parts: [{ text: "こんにちは！" }] } };
     }
-    mockRunner.runEphemeral.mockReturnValue(mockEvents());
+    mockRunner.runAsync.mockReturnValue(mockEvents());
 
-    const response = await runAgent(mockRunner as never, "テストメッセージ", "user-123");
+    const response = await runAgent(mockRunner as never, "テストメッセージ", "user-123", "session-abc");
 
     expect(response).toBe("こんにちは！");
-    expect(mockRunner.runEphemeral).toHaveBeenCalledWith({
+    expect(mockRunner.sessionService.getOrCreateSession).toHaveBeenCalledWith({
+      appName: "vercel-chat-adk",
       userId: "user-123",
+      sessionId: "session-abc",
+    });
+    expect(mockRunner.runAsync).toHaveBeenCalledWith({
+      userId: "user-123",
+      sessionId: "session-abc",
       newMessage: {
         role: "user",
         parts: [{ text: "テストメッセージ" }],
@@ -90,14 +102,17 @@ describe("runAgent", () => {
 
   it("エージェントから応答がない場合、デフォルトメッセージを返す", async () => {
     const { InMemoryRunner } = await import("@google/adk");
-    const mockRunner = new (InMemoryRunner as unknown as new () => { runEphemeral: ReturnType<typeof vi.fn> })();
+    const mockRunner = new (InMemoryRunner as unknown as new () => {
+      runAsync: ReturnType<typeof vi.fn>;
+      sessionService: { getOrCreateSession: ReturnType<typeof vi.fn> };
+    })();
 
     async function* mockEvents() {
       yield { author: "other-agent", content: { parts: [{ text: "ignored" }] } };
     }
-    mockRunner.runEphemeral.mockReturnValue(mockEvents());
+    mockRunner.runAsync.mockReturnValue(mockEvents());
 
-    const response = await runAgent(mockRunner as never, "テスト", "user-123");
+    const response = await runAgent(mockRunner as never, "テスト", "user-123", "session-abc");
 
     expect(response).toBe("応答を生成できませんでした。");
   });

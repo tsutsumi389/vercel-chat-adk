@@ -4,6 +4,7 @@ import { createMentionHandler } from "../src/handler.js";
 describe("createMentionHandler", () => {
   const mockRunAgent = vi.fn();
   const mockThread = {
+    id: "slack:C0123:1234567890.123",
     post: vi.fn().mockResolvedValue(undefined),
     startTyping: vi.fn().mockResolvedValue(undefined),
   };
@@ -22,7 +23,7 @@ describe("createMentionHandler", () => {
     const handler = createMentionHandler(mockRunAgent);
     await handler(mockThread as never, mockMessage as never);
 
-    expect(mockRunAgent).toHaveBeenCalledWith("こんにちは、ボットさん", "U123ABC");
+    expect(mockRunAgent).toHaveBeenCalledWith("こんにちは、ボットさん", "U123ABC", "slack:C0123:1234567890.123");
     expect(mockThread.post).toHaveBeenCalledWith("こんにちは！お手伝いします。");
   });
 
