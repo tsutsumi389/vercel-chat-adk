@@ -21,8 +21,8 @@ const chat = new Chat({
   state: createMemoryState(),
 });
 
-const boundRunAgent = (message: string, userId: string) =>
-  runAgent(runner, message, userId);
+const boundRunAgent = (message: string, userId: string, sessionId: string) =>
+  runAgent(runner, message, userId, sessionId);
 
 chat.onNewMention(createMentionHandler(boundRunAgent));
 chat.onSubscribedMessage(createMentionHandler(boundRunAgent));
