@@ -3,6 +3,7 @@ import { AIGateway } from "adk-llm-bridge";
 import type { Config } from "./config.js";
 
 const AGENT_NAME = "slack-assistant";
+const APP_NAME = "vercel-chat-adk";
 
 export function createAgent(config: Config) {
   const model = AIGateway(config.ollamaModel, {
@@ -18,7 +19,7 @@ export function createAgent(config: Config) {
   });
 
   const runner = new InMemoryRunner({
-    appName: "vercel-chat-adk",
+    appName: APP_NAME,
     agent,
   });
 
@@ -31,10 +32,8 @@ export async function runAgent(
   userId: string,
   sessionId: string,
 ): Promise<string> {
-  const appName = "vercel-chat-adk";
-
   await runner.sessionService.getOrCreateSession({
-    appName,
+    appName: APP_NAME,
     userId,
     sessionId,
   });
